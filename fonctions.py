@@ -37,7 +37,7 @@ def GetVolumesInfo(path):
             img=nib.load(os.path.join(srcPath,f))
             arr=np.squeeze(img.get_fdata())
             h=img.header
-            print('shape: ',arr.shape,'\t pixDim: ',h.get_zooms())
+            print(f[0:20],'\t','shape: ',arr.shape,'\t pixDim: ',h.get_zooms())
             
 def getDC(computed,truth,value):
     """
@@ -370,8 +370,8 @@ def Zoom(img,newDimensions=[],newPixDim=[]):
         h=img.header
         pixDim=np.asarray(h.get_zooms()[0:3])
         oldDim=np.asarray(arr.shape)
-        if newDimensions!=[]:
-            zoomValue=oldDim/newDimensions
+        if np.any(newDimensions):
+            zoomValue=newDimensions/oldDim
             newPixDim=pixDim/zoomValue
         else:
             zoomValue=pixDim/newPixDim
