@@ -25,7 +25,7 @@ main functions:
 """
 
 #UTILITIES######################
-def GetDataVolumesInfo(path):
+def GetVolumesInfo(path):
     """
     Prints shape and pixel dimension for all images in path
 
@@ -33,7 +33,7 @@ def GetDataVolumesInfo(path):
     srcPath=str(Path(path))
     allF=os.listdir(srcPath) 
     for f in allF:
-        if f[-3:]=='nii' or f[-3:]=='.gz':
+        if f[-3:]=='nii' or f[-6:]=='nii.gz':
             img=nib.load(os.path.join(srcPath,f))
             arr=np.squeeze(img.get_fdata())
             h=img.header
@@ -518,7 +518,13 @@ def Upsample(im):
     return im2
 
 def UpsampleFiles(srcPath,dstPath):
-    #Need to normalize pixel size before upsampling
+    """
+    Upsample process to apply on the output of niftynet:
+    1.Normalize pixel dimension
+    2.Upsample normalized image
+    3.Resulting image has a pixel dimension of (0.5,0.5,0.5)
+
+    """
     srcPath=str(Path(srcPath))
     dstPath=str(Path(dstPath))
     allF=os.listdir(srcPath)
