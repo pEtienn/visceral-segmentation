@@ -361,23 +361,27 @@ def ApplyFuncToAllImage(srcPath,dstPath,func):
         img2=Zoom(img,np.array([120,120,120]))
         nib.save(img2,os.path.join(dstPath,f))
         
-def Zoom(img,newDimensions):
+def Zoom(img,newDimensions=[],newPixDim=[]):
         """
     Wrapper for ndimage.zoom to work on files
 
     """
         arr=np.squeeze(img.get_fdata())
         h=img.header
-        pixDim=np.asarray(h.get_zooms())
+        pixDim=np.asarray(h.get_zooms()[0:3])
         oldDim=np.asarray(arr.shape)
-        zoomValue=oldDim/newDimensions
+        if newDimensions!=[]:
+            zoomValue=oldDim/newDimensions
+            newPixDim=pixDim/zoomValue
+        else:
+            zoomValue=pixDim/newPixDim
         arr2=ndimage.zoom(arr,zoomValue)
-        newPixDim=pixDim*zoomValue
+        
         h.set_zooms(newPixDim)
         im2=nib.Nifti1Image(arr2,affine=None,header=h)
         return im2
-        
-def ZoomAllIm(srcPath,dstPath,newDimensions):
+
+def ZoomAllIm(srcPath,dstPath,newDimensions=[],newPixDim=[]):
     srcPath=str(Path(srcPath))
     dstPath=str(Path(dstPath))
     allF=os.listdir(srcPath)
@@ -385,15 +389,7 @@ def ZoomAllIm(srcPath,dstPath,newDimensions):
         f=allF[i]
         if 'MRI' in f:
             img=nib.load(os.path.join(srcPath,f))
-            arr=np.squeeze(img.get_fdata())
-            h=img.header
-            pixDim=np.asarray(h.get_zooms())
-            oldDim=np.asarray(arr.shape)
-            zoomValue=newDimensions/oldDim
-            arr2=ndimage.zoom(arr,zoomValue)
-            newPixDim=pixDim/zoomValue
-            h.set_zooms(newPixDim)
-            im2=nib.Nifti1Image(arr2,affine=None,header=h)
+            im2=Zoom(img,newDimensions,newPixDim)
             nib.save(im2,os.path.join(dstPath,f))
             print(f)
 
@@ -454,7 +450,7 @@ def PrepareData(labelPath,mriPath,outPath,labelList=[0,58,86,237,29193,29662,296
     Crop(tempPathList[3],tempPathList[6],XYZ,centers)
     Rename(tempPathList[4],'_Label',extension='.nii')
     StandardizeLabels(tempPathList[4],tempPathList[5],labelList)
-    ZoomAllIm(tempPathList[6],outPath,imSize)
+    ZoomAllIm(tempPathList[6],outPath,newDimensions=imSize)
     ZoomAllLabel(tempPathList[5], outPath,imSize)
     for i in range(tFN):
         shutil.rmtree(tempPathList[i])
