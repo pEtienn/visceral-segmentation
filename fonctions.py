@@ -50,7 +50,7 @@ def getDC(computed,truth,value):
     den=np.sum(mapC)+np.sum(mapT)
     return num/den
 
-def MesureDC(truthPath,predictedPath):
+def MesureDCFile(truthPath,predictedPath):
     """
     Prints DC of each file outputed by niftynet
     truthPath: true segmentations of images infered by niftynet
