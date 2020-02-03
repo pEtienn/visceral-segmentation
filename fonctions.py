@@ -514,7 +514,11 @@ def Upsample(im):
     return im2
 
 def UpsampleFiles(srcPath,dstPath):
+    
     """
+    srcPath: path of the output of niftynet
+    dstPath: path to put the upsampled images in
+    
     Upsample process to apply on the output of niftynet:
     1.Normalize pixel dimension
     2.Upsample normalized image
