@@ -31,10 +31,10 @@ The same crop size is used for each image. The crop size is the smallest window 
 All those steps are done automatically with the function *PrepareData*. But before using it the data needs to be manually filtered. First the data (result of *CombineSegmentations*) must be separated manually between full body images and torso images. This is so that the Align and Crop step succeeds. Then some data needs to be removed. Data with abnormal pixel dimension, inversed axis or generally properties that are far from their group will result in *PrepareData* failling. Use the function *GetVolumesInfo* to get the size and pixel dimensions of the images.
 
 You should separate the data in 2 folders named (suggestion) fullBody and torso. Then the call of PrepareData is this: 
-labelPath=r'path/fullBody'
-mriPath=r'path/mri'
-outPath=r'path/outpath'
-PrepareData(labelPath,mriPath,outPath)
+>labelPath=r'path/fullBody'
+>mriPath=r'path/mri'
+>outPath=r'path/outpath'
+>PrepareData(labelPath,mriPath,outPath)
 labelPath=r'path/torso'
 PrepareData(labelPath,mriPath,outPath)
 
