@@ -12,7 +12,7 @@ All the functions mentionned in this document are included in this repository.
 **********************************************************
 1.Formatting the Visceral Dataset:
 The visceral dataset contains the different segmentations in differents files for the same volume image. The 
-first step is to combine the segmentations we are interested in. Use the fonction <CombineSegmentations> to do so. Some scans will be rejected at this point because they can't be read. 
+first step is to combine the segmentations we are interested in. Use the fonction [CombineSegmentations] to do so. Some scans will be rejected at this point because they can't be read. 
 
 After this perform the following steps:
 -Select only the patients with the labels needed
@@ -54,7 +54,7 @@ net_segment inference -c ~/niftynet/extensions/dense_vnet_abdominal/config.ini
 
 **********************************************************
 4.Evaluate the inferences
-To measure the DC of the inferences use the fonction <MesureDCFile>. You'll need the path of the output of niftynet as well as the path pointing to the true segmentations.
+To measure the DC of the inferences use the function <MesureDCFile>. You'll need the path of the output of niftynet as well as the path pointing to the true segmentations.
 
 **********************************************************
 5.Modify the inferences to allow generation of a Finite Element Model
