@@ -12,7 +12,7 @@ All the functions mentionned in this document are included in this repository.
 **********************************************************
 1.Formatting the Visceral Dataset:
 The visceral dataset contains the different segmentations in differents files for the same volume image. The 
-first step is to combine the segmentations we are interested in. Use the fonction [CombineSegmentations] to do so. Some scans will be rejected at this point because they can't be read. 
+first step is to combine the segmentations we are interested in. Use the fonction *CombineSegmentations* to do so. Some scans will be rejected at this point because they can't be read. 
 
 After this perform the following steps:
 -Select only the patients with the labels needed
