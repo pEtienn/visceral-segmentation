@@ -15,11 +15,11 @@ The visceral dataset contains the different segmentations in differents files fo
 first step is to combine the segmentations we are interested in. Use the fonction *CombineSegmentations* to do so. Some scans will be rejected at this point because they can't be read. 
 
 After this perform the following steps:
--Select only the patients with the labels needed
--Normatlize the pixel dimensions on the label images and the volumes images
--Align and crop the images as much as possible
--Standardize the labels (from 0 to the number of labels)
--Produce images of the same size for each patient. (120,120,120) was used in the previous experiment.
+*Select only the patients with the labels needed
+*Normatlize the pixel dimensions on the label images and the volumes images
+*Align and crop the images as much as possible
+*Standardize the labels (from 0 to the number of labels)
+*Produce images of the same size for each patient. (120,120,120) was used in the previous experiment.
 
 Note on resizing images
 Volume images: ndimage.zoom is used. It uses spline interpolation.
