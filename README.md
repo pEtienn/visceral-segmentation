@@ -28,7 +28,7 @@ Label images: a custom function is used. It uses nearest neighbour interpolation
 Note on cropping and aligning
 The same crop size is used for each image. The crop size is the smallest window that contain all labels in all images. "Aligning" is done taking by centering the crop window on the center of each image's label. A better approach would be using keypoints to align the images. 
 
-All those steps are done automatically with the function <PrepareData>. But before using it the data needs to be manually filtered. First the data (result of <CombineSegmentations>) must be separated manually between full body images and torso images. This is so that the Align and Crop step succeeds. Then some data needs to be removed. Data with abnormal pixel dimension, inversed axis or generally properties that are far from their group will result in <PrepareData> failling. Use the function <GetVolumesInfo> to get the size and pixel dimensions of the images.
+All those steps are done automatically with the function *PrepareData*. But before using it the data needs to be manually filtered. First the data (result of *CombineSegmentations*) must be separated manually between full body images and torso images. This is so that the Align and Crop step succeeds. Then some data needs to be removed. Data with abnormal pixel dimension, inversed axis or generally properties that are far from their group will result in *PrepareData* failling. Use the function *GetVolumesInfo* to get the size and pixel dimensions of the images.
 
 You should separate the data in 2 folders named (suggestion) fullBody and torso. Then the call of PrepareData is this: 
 labelPath=r'path/fullBody'
@@ -54,7 +54,7 @@ net_segment inference -c ~/niftynet/extensions/dense_vnet_abdominal/config.ini
 
 **********************************************************
 4.Evaluate the inferences
-To measure the DC of the inferences use the function <MesureDCFile>. You'll need the path of the output of niftynet as well as the path pointing to the true segmentations.
+To measure the DC of the inferences use the function *MesureDCFile*. You'll need the path of the output of niftynet as well as the path pointing to the true segmentations.
 
 **********************************************************
 5.Modify the inferences to allow generation of a Finite Element Model
