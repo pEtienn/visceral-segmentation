@@ -17,7 +17,7 @@ The following procedure will assume that your dataset is in a folder named *Anat
 
 The visceral dataset contains segmentations in differents files for the same volume image, all in */Segmentations*. The first step is to separate the MRt1 segmentations that we will be using from the rest. To do so you can use the search fonction in window explorer with the keyword *MRT1* from the */Segmentations* folder, then copy and paste all files found in a folder named */mrt1*. The next step is to combine the segmentations in one file per patient. Use the function *CombineSegmentations* to do so, with the destination folder as */Combined_segmentations*. Some scans will be rejected at this point because they can't be read. The function *PrepareDataForVnetInput* takes care of the rest.
 
-![Image of labelProgression]https://github.com/pEtienn/visceral-segmentation/blob/master/labelProgression.PNG
+![Image of labelProgression](https://github.com/pEtienn/visceral-segmentation/blob/master/labelProgression.PNG)
 
 Then perform the following steps with the function *PrepareDataForVnetInput*:
 * Select only the patients with the labels needed
@@ -44,7 +44,9 @@ PrepareDataForVnetInput(labelPath,mriPath,outPath)
 This will generate images that are ready to be inputed in the dense vnet, both volumes and label images. Those images have already been generated and are named: *vnet_inputs(contain_no_errors).zip*
 
 Here's the global data flowchart:
-![Image of data flowchart]https://github.com/pEtienn/visceral-segmentation/blob/master/global_data_flowchart.PNG
+
+![Image of data flowchart](https://github.com/pEtienn/visceral-segmentation/blob/master/global_data_flowchart.PNG)
+
 Note on resizing images
 Volume images: *ndimage.zoom is used*. It uses spline interpolation.
 Label images: a custom function is used. It uses nearest neighbour interpolation.
