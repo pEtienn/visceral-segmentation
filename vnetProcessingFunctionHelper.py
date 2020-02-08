@@ -62,6 +62,7 @@ def MesureDCFile(truthPath,predictedPath):
     predictedPath=str(Path(predictedPath))
     allF=os.listdir(predictedPath)
     allSrc=os.listdir(truthPath)
+    dc=[]
     for i in range(len(allF)):
         f=allF[i]
         if 'nii.gz' in f:
@@ -72,8 +73,11 @@ def MesureDCFile(truthPath,predictedPath):
             imgTruth=nib.load(pathSource)
             arrTruth=np.round(np.squeeze(imgTruth.get_fdata()))
             for j in range(np.unique(arrTruth).shape[0]):
-                print('DC ',j,' : ',getDC(arrPredicted,arrTruth,j))
+                t=getDC(arrPredicted,arrTruth,j)
+                print('DC ',j,' : ',t)
+                dc.append(t)
             print('\n')
+    return dc
 ############################################
 def CombineSegmentations(srcPath,outPath):
     """
@@ -227,7 +231,7 @@ def FilterPatientsByLabel(srcPath,outPath,labelList):
             nib.save(im2,os.path.join(outPath,f))
 
 def GetCropSize(path):
-"""
+    """
     Determine window size to keep for each image and keep the maximum
 
     Parameters
@@ -390,20 +394,20 @@ def Zoom(img,newDimensions=[],newPixDim=[]):
     Wrapper for ndimage.zoom to work on files
 
     """
-        arr=np.squeeze(img.get_fdata())
-        h=img.header
-        pixDim=np.asarray(h.get_zooms()[0:3])
-        oldDim=np.asarray(arr.shape)
-        if np.any(newDimensions):
-            zoomValue=newDimensions/oldDim
-            newPixDim=pixDim/zoomValue
-        else:
-            zoomValue=pixDim/newPixDim
-        arr2=ndimage.zoom(arr,zoomValue)
-        
-        h.set_zooms(newPixDim)
-        im2=nib.Nifti1Image(arr2,affine=None,header=h)
-        return im2
+    arr=np.squeeze(img.get_fdata())
+    h=img.header
+    pixDim=np.asarray(h.get_zooms()[0:3])
+    oldDim=np.asarray(arr.shape)
+    if np.any(newDimensions):
+        zoomValue=newDimensions/oldDim
+        newPixDim=pixDim/zoomValue
+    else:
+        zoomValue=pixDim/newPixDim
+    arr2=ndimage.zoom(arr,zoomValue)
+    
+    h.set_zooms(newPixDim)
+    im2=nib.Nifti1Image(arr2,affine=None,header=h)
+    return im2
 
 def ZoomAllIm(srcPath,dstPath,newDimensions=[],newPixDim=[]):
     """

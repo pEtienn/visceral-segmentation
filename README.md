@@ -14,6 +14,7 @@ All the functions mentionned in this document are included in this repository.
 
 The following procedure will assume that your dataset is in a folder named *Anatomy3-trainingset* situated in the path *./Anatomy3-traininset*. This folder contains the folders *Landmarks*, *Segmentations* and *Volumes*. From now on, all paths will start from *./Anatomy3-traininset*. For example: */foo* is *./Anatomy3-traininset/foo*.
 
+![Image of labelProgession](https://github.com/pEtienn/visceral-segmentation/blob/master/preparedata_flowchart.PNG)
 The visceral dataset contains segmentations in differents files for the same volume image, all in */Segmentations*. The first step is to separate the MRt1 segmentations that we will be using from the rest. To do so you can use the search fonction in window explorer with the keyword *MRT1* from the */Segmentations* folder, then copy and paste all files found in a folder named */mrt1*. The next step is to combine the segmentations in one file per patient. Use the function *CombineSegmentations* to do so, with the destination folder as */Combined_segmentations*. Some scans will be rejected at this point because they can't be read. 
 
 Then perform the following steps with the function *PrepareDataForVnetInput*:
@@ -22,6 +23,7 @@ Then perform the following steps with the function *PrepareDataForVnetInput*:
 * Align and crop the images as much as possible
 * Standardize the labels (from 0 to the number of labels)
 * Produce images of the same size for each patient. (120,120,120) was used in the previous experiment.
+
 
 All those steps are done automatically with the function *PrepareDataForVnetInput*. But before using it, the data needs to be manually filtered. First, the content of */Combined_segmentations* must be separated manually between the folders */full_body* and */torso*. This is so that the Align and Crop step succeeds. Then some data needs to be removed. Data with abnormal pixel dimension, inversed axis or generally properties that are far from their group will result in *PrepareDataForVnetInput* failling. Use the function *GetVolumesInfo* to get the size and pixel dimensions of the images.
 
