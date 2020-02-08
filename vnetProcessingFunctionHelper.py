@@ -19,7 +19,7 @@ import sys
 """
 This file contains a number of functions usefull in manipulating data for use in niftynet
 main functions:
-    PrepareData : takes care of the whole process 
+    PrepareDataForVnetInput : takes care of the whole process 
                     There's few checks on data, and the visceral datasets has some anomalies so data need to be selected manually in part
     UsampleFiles: use ready images for FEM
 """
@@ -57,6 +57,7 @@ def MesureDCFile(truthPath,predictedPath):
     predictedPath: output of niftynet
 
     """
+    rLabelNumber=re.compile('\d\d\d\d')
     truthPath=str(Path(truthPath))
     predictedPath=str(Path(predictedPath))
     allF=os.listdir(predictedPath)
@@ -64,7 +65,7 @@ def MesureDCFile(truthPath,predictedPath):
     for i in range(len(allF)):
         f=allF[i]
         if 'nii.gz' in f:
-            number=f[0:4]
+            number=rLabelNumber.findall(f)[0]
             imgPredicted=nib.load(os.path.join(predictedPath,f))
             arrPredicted=np.squeeze(imgPredicted.get_fdata())
             pathSource=os.path.join(truthPath,[x for x in allSrc if ((number in x) and ('Label' in x))][0])
@@ -202,6 +203,10 @@ def GetLabelInPatient(srcPath,labelList):
     return allLabels[allLabels[:,0].argsort()]
 
 def FilterPatientsByLabel(srcPath,outPath,labelList):
+    """
+    Keep only patients with the required labels and throw away all unrequired labels
+
+    """
     outPath=str(Path(outPath))
     srcPath=str(Path(srcPath))
     allF=os.listdir(srcPath)
@@ -222,6 +227,18 @@ def FilterPatientsByLabel(srcPath,outPath,labelList):
             nib.save(im2,os.path.join(outPath,f))
 
 def GetCropSize(path):
+"""
+    Determine window size to keep for each image and keep the maximum
+
+    Parameters
+    ----------
+    path : label path
+
+    Returns
+    -------
+    [radius XYZ of the window, center XYZ of the window]
+
+    """
     path=str(Path(path))
     allF=os.listdir(path)
     maxXYZ=np.zeros((3,2),dtype=np.int64)
@@ -279,6 +296,10 @@ def Crop(srcPath,outPath,XYZ,imageBoxCenter,margin=[0,0,0],decompress=True):
             nib.save(imgv2,os.path.join(outPath,f))
             
 def Rename(srcPath,suffix,extension='.nii.gz',numberDetectionRegex='^[0-9]*([0-9]{4})_'):
+    """
+    Rename all files in srcPath
+
+    """
     rPatientNumber=re.compile(numberDetectionRegex)
     srcPath=str(Path(srcPath))
     allF=os.listdir(srcPath) 
@@ -287,6 +308,10 @@ def Rename(srcPath,suffix,extension='.nii.gz',numberDetectionRegex='^[0-9]*([0-9
         os.rename(os.path.join(srcPath,f),os.path.join(srcPath,num+suffix+extension))
         
 def GetCorrespondingVolumes(volumesPath,outPath,labelPath,volumeID='^(.+)[wb|Ab]'):
+    """
+    Selects volumes in volumesPath that are from the same patients as those
+    in labelPath and puts them in outPath
+    """
     rVolumeID=re.compile(volumeID)
     volumesPath=str(Path(volumesPath))
     outPath=str(Path(outPath))
@@ -301,6 +326,10 @@ def GetCorrespondingVolumes(volumesPath,outPath,labelPath,volumeID='^(.+)[wb|Ab]
         nib.save(img,os.path.join(outPath,hdrF))
         
 def StandardizeLabels(srcPath,outPath,labels):
+    """
+    Change the labels to [0,1,2,...,n] n being the number of labels
+
+    """
     srcPath=str(Path(srcPath))
     allF=os.listdir(srcPath) 
     for f in allF:
@@ -333,6 +362,10 @@ def ImResize3D(im,dum,im2):
            
 
 def NormalizePixDimensions(folderPath,outPath):
+    """
+    Resize the window so that pixel dimension is (1,1,1)
+    To use on label images.
+    """
     path=str(Path(folderPath))
     outPath=str(Path(outPath))
     allF=os.listdir(path) 
@@ -351,18 +384,9 @@ def NormalizePixDimensions(folderPath,outPath):
         nib.save(imgv2,os.path.join(outPath,f))
         print(f)
 
-def ApplyFuncToAllImage(srcPath,dstPath,func):
-    srcPath=str(Path(srcPath))
-    dstPath=str(Path(dstPath))
-    allF=os.listdir(srcPath)
-    for i in range(len(allF)):
-        f=allF[i]
-        img=nib.load(os.path.join(srcPath,f))
-        img2=Zoom(img,np.array([120,120,120]))
-        nib.save(img2,os.path.join(dstPath,f))
         
 def Zoom(img,newDimensions=[],newPixDim=[]):
-        """
+    """
     Wrapper for ndimage.zoom to work on files
 
     """
@@ -382,6 +406,10 @@ def Zoom(img,newDimensions=[],newPixDim=[]):
         return im2
 
 def ZoomAllIm(srcPath,dstPath,newDimensions=[],newPixDim=[]):
+    """
+    Applyl Zoom to all volume images in srcPath
+
+    """
     srcPath=str(Path(srcPath))
     dstPath=str(Path(dstPath))
     allF=os.listdir(srcPath)
@@ -394,6 +422,9 @@ def ZoomAllIm(srcPath,dstPath,newDimensions=[],newPixDim=[]):
             print(f)
 
 def ZoomAllLabel(srcPath,dstPath,newDimensions):
+    """
+    Apply ImResize3D to all label images in srcPath
+    """
     srcPath=str(Path(srcPath))
     dstPath=str(Path(dstPath))
     allF=os.listdir(srcPath)
@@ -416,7 +447,7 @@ def ZoomAllLabel(srcPath,dstPath,newDimensions):
             print(f)
 
        
-def PrepareData(labelPath,mriPath,outPath,labelList=[0,58,86,237,29193,29662,29663,32248,32249],imSize=np.array([120,120,120])):
+def PrepareDataForVnetInput(labelPath,mriPath,outPath,labelList=[0,58,86,237,29193,29662,29663,32248,32249],imSize=np.array([120,120,120])):
     """
      prepare data for the dense vnet
      *** INPUT ***
@@ -463,13 +494,7 @@ def PrepareData(labelPath,mriPath,outPath,labelList=[0,58,86,237,29193,29662,296
 @guvectorize([(int64[:,:,:],int64[:,:,:],int64[:,:,:])], '(x,y,z),(a,b,c)->(a,b,c)',nopython=True)
 def _Upsample(im,dummy,imOutPadded):
     """
-     resizes 3D image using NN
-     *** INPUT ***
-    im: image
-    dum: dummy array to have dimensions for the output array
-    im2: output array
-     *** OUTPUT ***
-    new resized Image
+    Upsample an image to ready it for FEA
     """
     [row,col,deep]=np.asarray(np.shape(im))
     [row2,col2,deep2]=np.asarray(np.shape(dummy))
@@ -491,7 +516,8 @@ def _Upsample(im,dummy,imOutPadded):
                         
 def Upsample(im):
     """
-    Wrapper for _Upsample, upsample and image to ready it for FEA
+    Wrapper for _Upsample
+    Upsample an image to ready it for FEA
 
     Parameters
     ----------
