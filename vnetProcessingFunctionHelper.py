@@ -12,8 +12,10 @@ import re
 from numba import guvectorize,float64,int64
 import shutil
 import csv
-from scipy import ndimage
+from scipy import ndimage as ndi
 import sys
+import subprocess
+import pandas
 
 
 """
@@ -23,7 +25,8 @@ main functions:
                     There's few checks on data, and the visceral datasets has some anomalies so data need to be selected manually in part
     UsampleFiles: use ready images for FEM
 """
-
+np.set_printoptions(precision=3)
+np.set_printoptions(suppress=True)
 #UTILITIES######################
 def GetVolumesInfo(path):
     """
@@ -78,7 +81,135 @@ def MesureDCFile(truthPath,predictedPath):
                 dc.append(t)
             print('\n')
     return dc
-############################################
+######## KEY FILES FUNCTIONS ####################################
+    
+class keyInformationPosition():
+    """
+    information locations in SIFT datapoints
+    in an array of SIFT keypoints, row are the number of the keypoints, and colums
+    contains it's characteristics. Use kIP object to access the right characteristics
+    """
+    scale=3
+    XYZ=slice(0,3,1)
+    descriptor=slice(17,81,1)
+    flag=16
+    noFlag=[x for x in range(81) if x != 16]
+    
+kIP=keyInformationPosition()
+
+def FilterKeysWithMask(k,mask,considerScale=False):
+    k2=np.zeros(k.shape)
+    invMask=~mask
+    prevXYZ=np.array([1,2,3])
+    transfered=0
+    for i in range(k.shape[0]):
+        XYZ=np.int32(k[i,kIP.XYZ])
+        if ~np.allclose(XYZ,prevXYZ): #used to skip keypoints with different rotation
+            if considerScale==False:
+                if mask[tuple(XYZ)]==True:
+                    k2[i,:]=k[i,:]
+                    transfered=1
+                else:
+                    transfered=0
+            else:
+                mask2=np.zeros(mask.shape,dtype=np.bool)
+                c=int(k[i,kIP.scale]/np.sqrt(3)) #half the side of the smallest cube inside the keypoint
+                mask2[XYZ[0]-c:XYZ[0]+c,XYZ[1]-c:XYZ[1]+c,XYZ[2]-c:XYZ[2]+c]=True
+                if ~np.any(np.logical_and(invMask,mask2)):
+                    k2[i,:]=k[i,:]         
+                    transfered=1
+                else:
+                    transfered=0
+        elif transfered==1:
+            k2[i,:]=k[i,:]
+        prevXYZ=XYZ
+    k2=k2[~np.all(k2==0,axis=1)]
+    return k2
+
+def ReadKeypoints(filePath):
+    filePath=str(Path(filePath))
+    file= open (filePath,'r')
+    i=0
+    end=0
+    while end==0:
+        r=file.readline()
+        if 'Scale-space' in r:
+            end=1
+        i=i+1
+    file.close()
+    a=np.arange(0,i)
+    listC=list(a)
+    df=pandas.read_csv(filePath,sep='\t',header=None,index_col=False,skiprows=listC)
+    if len(df.columns)==82: #happens when there are tab at the end of a line (shouldnt be there)
+        df=df.drop(81,axis=1)
+
+    key=df.to_numpy(dtype=np.float64)
+
+    return key
+
+def GetResolutionHeaderFromKeyFile(filePath):
+    rReso=re.compile('(\d+ \d+ \d+)')
+    
+    file= open (filePath,'r')
+    #skip
+    header=''
+    end=0
+    while end==0:
+        r=file.readline()
+        header=header+r
+        if 'resolution' in r or 'Resolution' in r:
+            resoString=rReso.findall(r)
+            if resoString ==[]:
+                print('resolution not found in'+filePath)
+            else:
+                resoString=resoString[0]
+            resolution=[int(i) for i in resoString.split()]
+        if 'Scale-space' in r:
+            end=1
+    if r[:5]!='Scale':
+        print('ERROR: keypoint format not supported in'+filePath)
+    file.close()
+    if not('resolution' in locals()):
+        resolution=np.array([0,0,0])
+    return [resolution,header]
+
+
+def WriteKeyFile(path,keys,header='default'):
+    #todo change the number of features on given headers
+    if header=='default':
+        header="# featExtract 1.1\n# Extraction Voxel Resolution (ijk) : 176 208 176\
+        \n#Extraction Voxel Size (mm)  (ijk) : 1.000000 1.000000 1.000000\
+        \n#Feature Coordinate Space: millimeters (gto_xyz)\nFeatures: " +str(keys.shape[0])+"\
+        \nScale-space location[x y z scale] orientation[o11 o12 o13 o21 o22 o23 o31 o32 o32] 2nd moment eigenvalues[e1 e2 e3] info flag[i1] descriptor[d1 .. d64]\n"
+    else:
+        p=re.compile('Features: \d+')
+        header=p.sub('Features: '+str(keys.shape[0])+' ',header)
+    fW=open(path,'w',newline='\n')
+    fW.write(header)
+    for i in range(keys.shape[0]):
+        for j in range(keys.shape[1]):
+            if j>=16:
+                n=str(int(keys[i,j]))
+                fW.write(n+'\t')
+            else:
+                n=keys[i,j]
+                fW.write(format(n,'.6f')+'\t')
+            
+        fW.write('\n')
+    fW.close()
+    
+##########################################################################
+def ReadImage(filePath):
+    filePath=str(Path(filePath))
+    img=nib.load(filePath)
+    arr=np.squeeze(img.get_fdata())
+    h=img.header
+    return[arr,h]    
+    
+def SaveImage(filePath,arr,header):
+    im2=nib.Nifti1Image(arr,affine=None,header=header)
+    nib.save(im2,filePath)
+    
 def CombineSegmentations(srcPath,outPath):
     """
     Takes segmentation files of the Visceral dataset and creates a new set of files.
@@ -230,43 +361,53 @@ def FilterPatientsByLabel(srcPath,outPath,labelList):
             im2=nib.Nifti1Image(arr2,affine=None,header=img.header)
             nib.save(im2,os.path.join(outPath,f))
 
-def GetCropSize(path):
-    """
-    Determine window size to keep for each image and keep the maximum
 
+def GetCropSize(refLabelPath,refOriginalKeyPath,refKeyPath):
+    """
+    Determine :window size to keep on ref image, scaling to obtain desired window size
+    Filter reference keypoints present in desired segmentations
+    
     Parameters
     ----------
-    path : label path
+    path : 
 
     Returns
     -------
     [radius XYZ of the window, center XYZ of the window]
 
     """
-    path=str(Path(path))
-    allF=os.listdir(path)
-    maxXYZ=np.zeros((3,2),dtype=np.int64)
-    imageBoxCenter=np.zeros((len(allF),3))
-    for j in range(len(allF)):
-        f=allF[j]
-        img=nib.load(os.path.join(path,f))
-        arr=np.float32(np.squeeze(img.get_fdata()))
-        a=np.nonzero(arr)
-        XYZ=np.zeros((3,2),dtype=np.int64)
-        for i in range(3):
-            XYZ[i,0]=np.min(a[i])
-            XYZ[i,1]=np.max(a[i])+1
+    marginRatio=0.05
+    imageBoxCenter=np.zeros(3)
+
+    img=nib.load(refLabelPath)
+    arr=np.float32(np.squeeze(img.get_fdata()))
+    a=np.nonzero(arr)
+    XYZ=np.zeros((3,2),dtype=np.int64)
+    for i in range(3):
+        XYZ[i,0]=np.min(a[i])
+        XYZ[i,1]=np.max(a[i])+1
 #        print(XYZ)
-        imageBoxCenter[j,:]=np.mean(XYZ,axis=1)
-        print(arr.shape)
-        sizeXYZ=XYZ[:,1]-XYZ[:,0]
-        if np.sum(maxXYZ)==0:
-            maxXYZ=sizeXYZ
-        else:
-            maxXYZ=np.maximum(maxXYZ,sizeXYZ)
-    maxXYZ=np.ceil(maxXYZ)
-    maxXYZ=(maxXYZ+maxXYZ%2)/2
-    return [np.int64(maxXYZ), np.int64(imageBoxCenter)]
+    imageBoxCenter[:]=np.mean(XYZ,axis=1)    
+
+    XYZ=np.ceil(XYZ)
+    XYZ=(XYZ+XYZ%2)/2
+    sizeXYZ=XYZ[:,1]-XYZ[:,0]
+    #add margin
+    margin=(marginRatio*sizeXYZ)
+    margin=np.int64(margin)
+    XYZ[:,0]+=-margin
+    XYZ[:,1]+=margin
+    sizeXYZ=XYZ[:,1]-XYZ[:,0]
+    windowSize=sizeXYZ
+    
+    #generate keyRef
+    k=ReadKeypoints(refOriginalKeyPath)
+    [reso,h]=GetResolutionHeaderFromKeyFile(refOriginalKeyPath)
+    mask=arr>0
+    k1=FilterKeysWithMask(k,mask)
+    WriteKeyFile(refKeyPath,k1,h)
+    
+    return [windowSize,imageBoxCenter]
 
 def Crop(srcPath,outPath,XYZ,imageBoxCenter,margin=[0,0,0],decompress=True):
     """
@@ -298,7 +439,61 @@ def Crop(srcPath,outPath,XYZ,imageBoxCenter,margin=[0,0,0],decompress=True):
             nib.save(imgv2,os.path.join(outPath,f[:-3]))
         else:
             nib.save(imgv2,os.path.join(outPath,f))
-            
+
+def ExtractAllKeys(volumeNormalizedPath,dstPath,volumeID='(\d{4})[_.]'):
+    rVolumeID=re.compile(volumeID)
+    allF=os.listdir(volumeNormalizedPath)
+    print('extracting keypoints')
+    for f in allF:
+        num=rVolumeID.findall(f)[0]
+        print(num)
+        list_files = subprocess.run(['./featExtract.exe',os.path.join(volumeNormalizedPath,f),os.path.join(dstPath,num+'.key')])
+        print("The exit code was: %d" % list_files.returncode)
+        
+def CalculateTransformationMatrices(pKeyRef,pKeyFolder,volumeID='(\d{4})[_.]'):
+    rVolumeID=re.compile(volumeID)
+    allF=os.listdir(pKeyFolder)
+    print('calculating transformation matrices')
+    transformList=[]
+    for f in allF:
+        
+      #  if not rVolumeID.findall(f):#only match with non-ref patients
+        #list_files = subprocess.run(['./featMatchMultiple.exe','-r-',pKeyRef,os.path.join(pKeyFolder,f)]) #,'-n','1'
+        command=[r'./featMatchMultiple.exe',r'-r-',pKeyRef,os.path.join(pKeyFolder,f)] #
+        output = subprocess.run(command,stdout=subprocess.PIPE)
+        inlierReg='inliers (\d+)'
+        rInlier=re.compile(inlierReg)
+
+        # print(str(output.stdout))
+        nbInliers=rInlier.findall(str(output.stdout))[0]
+        print('nb of inliers: ',nbInliers)
+        #print("The exit code was: %d" % list_files.returncode)
+        pInvTrans=os.path.join(pKeyFolder,f+'.trans-inverse.txt') #
+        df=pandas.read_csv(pInvTrans,sep='\t',header=None)
+        invTrans=df.to_numpy(dtype=np.float64)
+        print(invTrans)
+        transformList.append(invTrans)
+    
+    #delete non-key files
+    newAllF=os.listdir(pKeyFolder)
+    diff=[x for x in newAllF if x not in allF]
+    for f in diff:
+        os.remove(os.path.join(pKeyFolder,f))
+    return transformList
+    
+    
+def TransformImages(pRefKey,pImageFolder,pDstFolder,lTransform):
+    allF=os.listdir(pImageFolder)
+    if len(allF)!=len(lTransform):
+        print('in TransformImages nb of files and nb of transforms did not match')
+        sys.exit()
+    [r,h]=GetResolutionHeaderFromKeyFile(pRefKey)
+    for i in range(len(allF)):
+        f=allF[i]
+        [arr,h]=ReadImage(os.path.join(pImageFolder,f))
+        newArr=ndi.affine_transform(arr,lTransform[i],output_shape=tuple(r))
+        SaveImage(os.path.join(pDstFolder,f),newArr,h)
+    
 def Rename(srcPath,suffix,extension='.nii.gz',numberDetectionRegex='^[0-9]*([0-9]{4})_'):
     """
     Rename all files in srcPath
@@ -403,7 +598,7 @@ def Zoom(img,newDimensions=[],newPixDim=[]):
         newPixDim=pixDim/zoomValue
     else:
         zoomValue=pixDim/newPixDim
-    arr2=ndimage.zoom(arr,zoomValue)
+    arr2=ndi.zoom(arr,zoomValue)
     
     h.set_zooms(newPixDim)
     im2=nib.Nifti1Image(arr2,affine=None,header=h)
@@ -479,6 +674,7 @@ def PrepareDataForVnetInput(labelPath,mriPath,outPath,labelList=[0,58,86,237,291
     GetCorrespondingVolumes(mriPath,tempPathList[1],tempPathList[0])
     NormalizePixDimensions(tempPathList[0],tempPathList[2])
     NormalizePixDimensions(tempPathList[1],tempPathList[3])
+    
     [XYZ,centers]=GetCropSize(tempPathList[2])
     Crop(tempPathList[2],tempPathList[4],XYZ,centers)
     Rename(tempPathList[3],'_MRI',extension='.nii.gz')
