@@ -53,6 +53,21 @@ def getDC(computed,truth,value):
     den=np.sum(mapC)+np.sum(mapT)
     return num/den
 
+# def FuncOnF(path,fct,dstPath=None):
+#     if os.path.isdir(path):
+#         mega
+#     elif os.path.isfile(path):
+        
+            
+# # def FuncOnFile(path,fct,dstPath=None)
+# #     name,extension=os.path.splitext(path)
+# #     if extension=='.key':
+# #         k=ReadKeypoints(path)
+# #         [r,h]=GetResolutionHeaderFromKeyFile()
+    
+# #     elif extension=='.nii' or (extension=='.gz' and len(name)>4 and name[:-4]=='.nii'):
+        
+        
 def MesureDCFile(truthPath,predictedPath):
     """
     Prints DC of each file outputed by niftynet
@@ -459,7 +474,7 @@ def CalculateTransformationMatrices(pKeyRef,pKeyFolder,volumeID='(\d{4})[_.]'):
         
       #  if not rVolumeID.findall(f):#only match with non-ref patients
         #list_files = subprocess.run(['./featMatchMultiple.exe','-r-',pKeyRef,os.path.join(pKeyFolder,f)]) #,'-n','1'
-        command=[r'./featMatchMultiple.exe',r'-r-',pKeyRef,os.path.join(pKeyFolder,f)] #
+        command=[r'./featMatchMultiple.exe',pKeyRef,os.path.join(pKeyFolder,f)] #,r'-r-'
         output = subprocess.run(command,stdout=subprocess.PIPE)
         inlierReg='inliers (\d+)'
         rInlier=re.compile(inlierReg)
@@ -560,7 +575,7 @@ def ImResize3D(im,dum,im2):
                 im2[x,y,z]=im[np.int64(np.round_((oldDim[0]-1)/(newDim[0]-1)*x)),np.int64(np.round_((oldDim[1]-1)/(newDim[1]-1)*y)),np.int64(np.round_((oldDim[2]-1)/(newDim[2]-1)*z))]
            
 
-def NormalizePixDimensions(folderPath,outPath):
+def NormalizePixDimensionsLabel(folderPath,outPath):
     """
     Resize the window so that pixel dimension is (1,1,1)
     To use on label images.
@@ -583,6 +598,27 @@ def NormalizePixDimensions(folderPath,outPath):
         nib.save(imgv2,os.path.join(outPath,f))
         print(f)
 
+def NormalizePixDimensionsVolume(folderPath,outPath):
+    """
+    Resize the window so that pixel dimension is (1,1,1)
+    To use on label images.
+    """
+    path=str(Path(folderPath))
+    outPath=str(Path(outPath))
+    allF=os.listdir(path) 
+    for f in allF:
+        img=nib.load(os.path.join(path,f))
+        arr=np.squeeze(img.get_fdata())
+        h=img.header
+        pixDim=np.asarray(h.get_zooms())
+        oldDim=np.asarray(arr.shape)
+        newDim=np.int64(np.multiply(np.float32(oldDim),pixDim))
+        print(pixDim)
+        newArr=ndi.zoom(np.int64(arr),pixDim)
+        h.set_zooms((1,1,1))
+        imgv2=nib.Nifti1Image(newArr,affine=None,header=h)
+        nib.save(imgv2,os.path.join(outPath,f))
+        print(f)
         
 def Zoom(img,newDimensions=[],newPixDim=[]):
     """
@@ -672,8 +708,10 @@ def PrepareDataForVnetInput(labelPath,mriPath,outPath,labelList=[0,58,86,237,291
         os.makedirs(tempPathList[i])
     FilterPatientsByLabel(labelPath,tempPathList[0],labelList)
     GetCorrespondingVolumes(mriPath,tempPathList[1],tempPathList[0])
-    NormalizePixDimensions(tempPathList[0],tempPathList[2])
-    NormalizePixDimensions(tempPathList[1],tempPathList[3])
+    
+    #bad, normalizepixdim should not be used on images
+    NormalizePixDimensionsLabel(tempPathList[0],tempPathList[2])
+    NormalizePixDimensionsVolume(tempPathList[1],tempPathList[3])#image
     
     [XYZ,centers]=GetCropSize(tempPathList[2])
     Crop(tempPathList[2],tempPathList[4],XYZ,centers)
