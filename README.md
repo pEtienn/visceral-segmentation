@@ -1,5 +1,5 @@
 # visceral-segmentation
- Consolidated code for visceral segmenation
+ Consolidated code for visceral segmentation
 
 This document details the following processes:
 1. Format the visceral dataset 
@@ -21,7 +21,7 @@ The visceral dataset contains segmentations in differents files for the same vol
 
 Then perform the following steps with the function *PrepareDataForVnetInput*:
 * Select only the patients with the labels needed
-* Normatlize the pixel dimensions on the label images and the volumes images
+* Normalize the pixel dimensions on the label images and the volumes images
 * Align and crop the images as much as possible
 * Standardize the labels (from 0 to the number of labels)
 * Produce images of the same size for each patient. (120,120,120) was used in the previous experiment.
@@ -48,10 +48,12 @@ Here's the global data flowchart:
 ![Image of data flowchart](https://github.com/pEtienn/visceral-segmentation/blob/master/global_data_flowchart.PNG)
 
 Note on resizing images
+
 Volume images: *ndimage.zoom is used*. It uses spline interpolation.
 Label images: a custom function is used. It uses nearest neighbour interpolation.
 
 Note on cropping and aligning
+
 The same crop size is used for each image. The crop size is the smallest window that contain all labels in all images. "Aligning" is done taking by centering the crop window on the center of each image's label. A better approach would be using keypoints to align the images. 
 
 **********************************************************
@@ -63,11 +65,13 @@ This assumes a standard file configuration. To train the net you need to place t
 
 **********************************************************
 3.Generate inferences with niftynet
+
 Use the following command to infer segmentations:
 >net_segment inference -c ~/niftynet/extensions/dense_vnet_abdominal/config.ini
 
 **********************************************************
 4.Evaluate the inferences
+
 To measure the DC of the inferences use the function *MesureDCFile*. You'll need the path of the output of niftynet as well as the path pointing to the true segmentations.
 
 **********************************************************
